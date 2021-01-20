@@ -1,0 +1,3 @@
+GameInfo {
+   PlayerClasses = "DoomPlayerTest1", "DoomPlayerTest2"
+}
