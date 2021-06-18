@@ -19,7 +19,7 @@ Class ClassBasedPickup : Inventory {
 	//fill this array with item class names:
 	static const Class<Inventory> CBP_items[] = {
 		'Shell',
-		'ClipBox'
+		'Shotgun'
 	};
 	override void PostBeginPlay() {
 		super.PostBeginPlay();
@@ -43,22 +43,23 @@ Class ClassBasedPickup : Inventory {
 			return GetDefaultByType(finalPickup).PickupMsg;
 		return "";
 	}
-	override bool TryPickup (in out Actor other) {
-		if (!other || !(other is "PlayerPawn"))
+	override bool TryPickup (in out Actor toucher) {
+		if (!toucher || !(toucher is "PlayerPawn"))
 			return false;
-		let pclass = other.GetClassName();
+		let pclass = toucher.GetClassName();
 		for (int i = 0; i < CBP_classes.Size(); i++) {
 			if (pclass != CBP_classes[i])
 				continue;
 			finalPickup = CBP_items[i];
 			int maxamt = GetDefaultByType(finalPickup).maxamount;
-			if (other.CountInv(finalPickup) >= maxamt) {
+			if (toucher.CountInv(finalPickup) >= maxamt) {
 				return false;
 				break;
 			}
-			//console.printf("Giving %s to %s",finalPickup.GetClassName(),other.GetClassName()); //debug string
+			//console.printf("Giving %s to %s",finalPickup.GetClassName(),toucher.GetClassName()); //debug string
 			pickupsound = GetDefaultByType(finalPickup).pickupsound;
-			other.GiveInventory(finalPickup,GetDefaultByType(finalPickup).amount);
+			PlayPickupSound(toucher);
+			toucher.GiveInventory(finalPickup,GetDefaultByType(finalPickup).amount);
 			GoAwayAndDie();
 			return true;
 			break;
@@ -72,7 +73,7 @@ Class ClassBasedPickup : Inventory {
 	}
 }
 
-//test player classses:
+//test player classes:
 
 Class DoomPlayerTest1 : DoomPlayer {
 	Default {
