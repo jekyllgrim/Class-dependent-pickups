@@ -51,18 +51,26 @@ Class ClassBasedPickup : Inventory {
 	}
 	
 	override bool TryPickup (in out Actor toucher) {
-		if (!toucher || !(toucher is "PlayerPawn"))
+		if (!toucher || !toucher.player)
 			return false;
+		
 		let pclass = toucher.GetClassName();
+		
 		for (int i = 0; i < CBP_classes.Size(); i++) {
 			if (pclass != CBP_classes[i])
 				continue;
+		
 			finalPickup = CBP_items[i];
 			let itm = Inventory(Spawn(finalPickup, toucher.pos));
-			if (itm && itm.CallTryPickup(toucher)) {
-				GoAwayAndDie();
-				return true;
-				break;
+			if (itm) {
+				if (itm.CallTryPickup(toucher)) {
+					GoAwayAndDie();
+					return true;
+					break;
+				}
+				else {
+					itm.Destroy();
+				}
 			}
 		}
 		return false;
