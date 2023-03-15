@@ -11,16 +11,19 @@ version "4.5.0"
 
 Class ClassBasedPickup : Inventory {
 	protected Class<Inventory> finalPickup;
+	
 	//fill this array with player class names:
 	static const Class<PlayerPawn> CBP_classes[] = {
 		'DoomPlayerTest1',
 		'DoomPlayerTest2'
 	};
+	
 	//fill this array with item class names:
 	static const Class<Inventory> CBP_items[] = {
 		'Shell',
 		'Shotgun'
 	};
+	
 	override void PostBeginPlay() {
 		super.PostBeginPlay();
 		let pclass = players[consoleplayer].mo.GetClassName();
@@ -31,18 +34,22 @@ Class ClassBasedPickup : Inventory {
 		for (int i = 0; i < CBP_classes.Size(); i++) {
 			if (pclass != CBP_classes[i])
 				continue;
-			sprite = GetDefaultByType(CBP_items[i]).SpawnState.sprite;
-			frame = GetDefaultByType(CBP_items[i]).SpawnState.frame;
-			scale = GetDefaultByType(CBP_items[i]).scale;
-			A_SetRenderstyle(GetDefaultByType(CBP_items[i]).alpha,GetDefaultByType(CBP_items[i]).GetRenderstyle());
+			let def = GetDefaultByType(CBP_items[i]);
+			pickupsound = def.pickupsound;
+			sprite = def.SpawnState.sprite;
+			frame = def.SpawnState.frame;
+			scale = def.scale;
+			A_SetRenderstyle(def.alpha, def.GetRenderstyle());
 			break;
 		}
 	}	
+	
 	override string PickupMessage () {
 		if(finalPickup) 
 			return GetDefaultByType(finalPickup).PickupMsg;
 		return "";
 	}
+	
 	override bool TryPickup (in out Actor toucher) {
 		if (!toucher || !(toucher is "PlayerPawn"))
 			return false;
@@ -51,22 +58,17 @@ Class ClassBasedPickup : Inventory {
 			if (pclass != CBP_classes[i])
 				continue;
 			finalPickup = CBP_items[i];
-			int maxamt = GetDefaultByType(finalPickup).maxamount;
-			if (toucher.CountInv(finalPickup) >= maxamt) {
-				return false;
+			let itm = Inventory(Spawn(finalPickup, toucher.pos));
+			if (itm && itm.CallTryPickup(toucher)) {
+				GoAwayAndDie();
+				return true;
 				break;
 			}
-			//console.printf("Giving %s to %s",finalPickup.GetClassName(),toucher.GetClassName()); //debug string
-			pickupsound = GetDefaultByType(finalPickup).pickupsound;
-			PlayPickupSound(toucher);
-			toucher.GiveInventory(finalPickup,GetDefaultByType(finalPickup).amount);
-			GoAwayAndDie();
-			return true;
-			break;
 		}
 		return false;
 	}
-	states {
+	
+	States {
 	Spawn:
 		#### # -1;
 		stop;
