@@ -96,6 +96,10 @@ class JGP_ClassDependentPickup : Inventory
 			sprite = def.SpawnState.sprite;
 			frame = def.SpawnState.frame;
 			scale = def.scale;
+			spriteOffset = def.spriteOffset;
+			spriteRotation = def.spriteRotation;
+			bFloatBob = def.bFloatBob;
+			floatBobPhase = def.floatBobPhase;
 			A_SetRenderstyle(def.alpha, def.GetRenderstyle());
 		}
 	}
