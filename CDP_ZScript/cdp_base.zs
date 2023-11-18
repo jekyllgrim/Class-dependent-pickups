@@ -117,6 +117,28 @@ class JGP_ClassDependentPickup : Inventory
 			let itm = Inventory(Spawn(itmcls, toucher.pos));
 			if (itm)
 			{
+				itm.SpawnAngle = SpawnAngle;
+				itm.Angle		= Angle;
+				itm.Pitch		= Pitch;
+				itm.Roll		= Roll;
+				itm.SpawnPoint = SpawnPoint;
+				itm.special    = special;
+				itm.args[0]    = args[0];
+				itm.args[1]    = args[1];
+				itm.args[2]    = args[2];
+				itm.args[3]    = args[3];
+				itm.args[4]    = args[4];
+				itm.special1   = special1;
+				itm.special2   = special2;
+				itm.SpawnFlags = SpawnFlags & ~MTF_SECRET;
+				itm.HandleSpawnFlags();
+				itm.SpawnFlags = SpawnFlags;
+				itm.bCountSecret = SpawnFlags & MTF_SECRET;
+				itm.ChangeTid(tid);
+				itm.Vel	= Vel;
+				itm.master = master;
+				itm.target = target;
+				itm.tracer = tracer;
 				if (itm.CallTryPickup(toucher))
 				{
 					itm.PlayPickupSound(toucher);
