@@ -161,7 +161,7 @@ class JGP_ClassDependentPickup : Inventory
 	
 	States {
 	Spawn:
-		#### # -1;
+		TNT1 A -1;
 		stop;
 	}
 }
