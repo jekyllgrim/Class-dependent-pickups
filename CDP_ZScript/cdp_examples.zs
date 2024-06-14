@@ -1,7 +1,7 @@
 
 // Example pickup:
 
-class TestCBP : JGP_ClassDependentPickup
+class TestCDP : JGP_ClassDependentPickup
 {
 	Default
 	{
