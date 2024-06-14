@@ -4,7 +4,6 @@ class JGP_ClassDependentPickup : Inventory
 	property ClassPairs : ClassPairs;
 	
 	protected array<string> classPairsList;
-	protected string finalPickupMsg;
 	
 	static JGP_ClassDependentPickup Create(vector3 pos, string pairs)
 	{
@@ -23,7 +22,7 @@ class JGP_ClassDependentPickup : Inventory
 		list.Split(pairs, "|", TOK_SKIPEMPTY);
 		if (pairs.Size() < 1)
 		{
-			console.printf("\"%s\" is not a valid list of class pairs.\nThe correct format is \"FirstPlayerClass:FirstItemClass|SecondPlayerClass:SecondItemClass|ThirdPlayerClass:ThirdItemClass\" and so on", list);
+			console.printf("\cgCDP error:\c- \cd%s\c- is not a valid list of class pairs.\nThe correct format is \cd\"FirstPlayerClass:FirstItemClass|SecondPlayerClass:SecondItemClass|ThirdPlayerClass:ThirdItemClass\"\c-\nand so on", list);
 			return false;
 		}
 		
@@ -33,7 +32,7 @@ class JGP_ClassDependentPickup : Inventory
 			pairs[i].Split(str, ":", TOK_SKIPEMPTY);
 			if (str.Size() != 2)
 			{
-				console.printf("\"%s\" is not a valid class pair.\nUse \"PlayerClassName:ItemClassName\" to pair player classes and item classes", pairs[i]);
+				console.printf("\cgCDP error:\c- \cd%s\c- is not a valid class pair.\nUse \cd\"PlayerClassName:ItemClassName\"\c- to pair player classes and item classes", pairs[i]);
 				continue;
 			}
 			classPairsList.Push(pairs[i]);
@@ -59,7 +58,7 @@ class JGP_ClassDependentPickup : Inventory
 			class<Inventory> itm = str[1];
 			if (!itm)
 			{
-				console.printf("\"%s\" is not a valid Inventory class", str[1]);
+				console.printf("\cgCDP error:\c- \cd%s\c- is not a valid Inventory class", str[1]);
 				return null;
 				break;
 			}
@@ -68,16 +67,16 @@ class JGP_ClassDependentPickup : Inventory
 		}
 		return null;
 	}
-	
-	override void PostBeginPlay()
+
+	override void BeginPlay()
 	{
-		super.PostBeginPlay();
+		Super.BeginPlay();
 		
 		if (classPairsList.Size() <= 0)
 		{
 			if (ClassPairs == "")
 			{
-				console.printf("Cannot spawn a class-based pickup without a defined list of class pairs");
+				console.printf("\cgCDP error:\c- Cannot spawn a class-based pickup without a defined list of class pairs");
 				Destroy();
 				return;
 			}
@@ -88,6 +87,11 @@ class JGP_ClassDependentPickup : Inventory
 				return;
 			}
 		}
+	}
+	
+	override void PostBeginPlay()
+	{
+		super.PostBeginPlay();
 		
 		class<Inventory> itmcls = GetItemByClass(players[consoleplayer].mo.GetClassName());
 		if (itmcls)
@@ -103,59 +107,80 @@ class JGP_ClassDependentPickup : Inventory
 			A_SetRenderstyle(def.alpha, def.GetRenderstyle());
 		}
 	}
-	
-	override string PickupMessage ()
+
+	Inventory SpawnClassPickup(Actor toucher)
 	{
-		return StringTable.Localize(finalPickupMsg);
+		class<Inventory> itmcls = GetItemByClass(toucher.GetClassName());
+		if (!itmcls) return null;
+		
+		let itm = Inventory(Spawn(itmcls, toucher.pos));
+		if (!itm) return null;
+			
+		itm.SpawnAngle = SpawnAngle;
+		itm.Angle		= Angle;
+		itm.Pitch		= Pitch;
+		itm.Roll		= Roll;
+		itm.SpawnPoint = SpawnPoint;
+		itm.special    = special;
+		itm.args[0]    = args[0];
+		itm.args[1]    = args[1];
+		itm.args[2]    = args[2];
+		itm.args[3]    = args[3];
+		itm.args[4]    = args[4];
+		itm.special1   = special1;
+		itm.special2   = special2;
+		itm.SpawnFlags = SpawnFlags & ~MTF_SECRET;
+		itm.HandleSpawnFlags();
+		itm.SpawnFlags = SpawnFlags;
+		itm.bCountSecret = SpawnFlags & MTF_SECRET;
+		itm.ChangeTid(tid);
+		itm.Vel	= Vel;
+		itm.master = master;
+		itm.target = target;
+		itm.tracer = tracer;
+		return itm;
+	}
+
+	override void Touch(Actor toucher)
+	{
+		if (!toucher || !toucher.player)
+			return;
+
+		let itm = SpawnClassPickup(toucher);
+		if (!itm)
+		{
+			return;
+		}
+
+		itm.Touch(toucher);
+		if (!itm || itm.bNoSector || itm.owner)
+		{
+			GoAwayAndDie();
+		}
+		else
+		{
+			itm.Destroy();
+		}
 	}
 	
 	override bool TryPickup (in out Actor toucher)
 	{
-		if (!toucher || !toucher.player)
+		if (!toucher)
 			return false;
-		
-		class<Inventory> itmcls = GetItemByClass(toucher.GetClassName());
-		
-		if (itmcls)
+
+		let itm = SpawnClassPickup(toucher);
+		if (!itm)
 		{
-			let itm = Inventory(Spawn(itmcls, toucher.pos));
-			if (itm)
-			{
-				itm.SpawnAngle = SpawnAngle;
-				itm.Angle		= Angle;
-				itm.Pitch		= Pitch;
-				itm.Roll		= Roll;
-				itm.SpawnPoint = SpawnPoint;
-				itm.special    = special;
-				itm.args[0]    = args[0];
-				itm.args[1]    = args[1];
-				itm.args[2]    = args[2];
-				itm.args[3]    = args[3];
-				itm.args[4]    = args[4];
-				itm.special1   = special1;
-				itm.special2   = special2;
-				itm.SpawnFlags = SpawnFlags & ~MTF_SECRET;
-				itm.HandleSpawnFlags();
-				itm.SpawnFlags = SpawnFlags;
-				itm.bCountSecret = SpawnFlags & MTF_SECRET;
-				itm.ChangeTid(tid);
-				itm.Vel	= Vel;
-				itm.master = master;
-				itm.target = target;
-				itm.tracer = tracer;
-				if (itm.CallTryPickup(toucher))
-				{
-					itm.PlayPickupSound(toucher);
-					itm.PrintPickupMessage(true, itm.pickupMsg);
-					GoAwayAndDie();
-				}
-				
-				else
-				{
-					itm.Destroy();
-				}
-			}
+			Destroy();
+			return false;
 		}
+
+		bool picked = itm.CallTryPickup(toucher);
+		if (!picked && itm && !itm.bNoSector && !itm.owner)
+		{
+			itm.Destroy();
+		}
+		Destroy();
 		return false;
 	}
 	
