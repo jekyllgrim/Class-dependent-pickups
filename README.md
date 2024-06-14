@@ -2,8 +2,6 @@
 
 © 2021-2023 Agent_Ash aka Jekyll Grim Payne
 
-Feel free to use it in your own projects. Credits are appreciated.
-
 ## Description
 
 ZScript-based class-dependent pickups for GZDoom. The `JGP_ClassDependentPickup` class allows defining pickups that will look like different items and will give different items depending on the player's playerclass. **It's compatible with multiplayer**: the item will still look like and give different items to different players, but once one player picks it up, it'll disappear for everyone.
@@ -24,6 +22,8 @@ Class pairs, whether defined through a property or a static function argument, u
 
 `"FirstPlayerClass:FirstItemClass|SecondPlayerClass:SecondItemClass"` and so on. So, place `:` between a playerclass name and an item name, and place `|` between each pair. There's no limit on the number of pairs.
 
-Note that the player classes must be defined via the *class* name, not their displayname.
+Note that the player classes must be defined via the *class* name, not their displayname (for example, `DoomPlayer` is valid, `Doom Marine` is not).
 
- 
+### License and permissions
+
+This resource is licensed under MIT license. See [LICENSE.txt](CDP_ZScript/LICENSE.txt) for details. Short version: anyone can use it for any purpose, just copy my LICENSE.txt somewhere into your project.
