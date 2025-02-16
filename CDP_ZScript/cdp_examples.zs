@@ -9,6 +9,14 @@ class TestCDP : JGP_ClassDependentPickup
 	}
 }
 
+class TestCDP1 : JGP_ClassDependentPickup
+{
+	Default
+	{
+		JGP_ClassDependentPickup.ClassPairs "DoomPlayerTest1:SoulSphere|DoomPlayerTest2:BlueArmor";
+	}
+}
+
 // Example player classes:
 class DoomPlayerTest1 : DoomPlayer
 {

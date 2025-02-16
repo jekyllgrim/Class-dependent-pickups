@@ -1,9 +1,39 @@
+class JGP_ItemClassPair play
+{
+	class<Actor> toucherClass;
+	class<Inventory> itemClass;
+
+	static JGP_ItemClassPair Create(Name toucherClassName, Name itemClassName)
+	{
+		class<Actor> tcls = toucherClassName;
+		class<Inventory> icls = itemClassName;
+		if (!tcls || !icls)
+		{
+			return null;
+		}
+		let data = new('JGP_ItemClassPair');
+		if (data)
+		{
+			data.toucherClass = tcls;
+			data.itemClass = icls;
+		}
+		return data;
+	}
+}
+
 class JGP_ClassDependentPickup : Inventory
 {
 	string ClassPairs;
 	property ClassPairs : ClassPairs;
-	
-	protected array<string> classPairsList;
+	protected array<JGP_ItemClassPair> classPairsData;
+	protected array<Inventory> spawnedItems;
+
+	Default
+	{
+		+SYNCHRONIZED
+		+DONTBLAST
+		FloatBobPhase 0;
+	}
 	
 	static JGP_ClassDependentPickup Create(vector3 pos, string pairs)
 	{
@@ -16,14 +46,23 @@ class JGP_ClassDependentPickup : Inventory
 		return cdp;
 	}
 	
-	bool FillClassPairs(string list)
+	void FillClassPairs()
 	{
+		if (classPairsData.Size() > 0)
+			return;
+
+		if (ClassPairs == "")
+		{
+			ThrowAbortException("\cgCDP error:\c- Cannot spawn a class-based pickup without a defined list of class pairs");
+			return;
+		}
+
 		array<string> pairs;
-		list.Split(pairs, "|", TOK_SKIPEMPTY);
+		ClassPairs.Split(pairs, "|", TOK_SKIPEMPTY);
 		if (pairs.Size() < 1)
 		{
-			console.printf("\cgCDP error:\c- \cd%s\c- is not a valid list of class pairs.\nThe correct format is \cd\"FirstPlayerClass:FirstItemClass|SecondPlayerClass:SecondItemClass|ThirdPlayerClass:ThirdItemClass\"\c-\nand so on", list);
-			return false;
+			ThrowAbortException("\cgCDP error:\c- \cd%s\c- is not a valid list of class pairs.\nThe correct format is \cd\"FirstPlayerClass:FirstItemClass|SecondPlayerClass:SecondItemClass|ThirdPlayerClass:ThirdItemClass\"\c-\nand so on", ClassPairs);
+			return;
 		}
 		
 		for (int i = 0; i < pairs.Size(); i++)
@@ -35,85 +74,51 @@ class JGP_ClassDependentPickup : Inventory
 				console.printf("\cgCDP error:\c- \cd%s\c- is not a valid class pair.\nUse \cd\"PlayerClassName:ItemClassName\"\c- to pair player classes and item classes", pairs[i]);
 				continue;
 			}
-			classPairsList.Push(pairs[i]);
+			let data = JGP_ItemClassPair.Create(str[0], str[1]);
+			if (data)
+			{
+				classPairsData.Push(data);
+			}
 		}
-		return (classPairsList.Size() >= 1);
 	}
 	
-	class<Inventory> GetItemByClass(name pclsname)
+	class<Inventory> GetItemByClass(class<Actor> toucherClass)
 	{
-		if (classPairsList.Size() <= 0)
-			return null;
-			
-		for (int i = 0; i < classPairsList.Size(); i++)
+		foreach (data : classPairsData)
 		{
-			array<string> str;
-			classPairsList[i].Split(str, ":", TOK_SKIPEMPTY);
-			if (str.Size() != 2)
-				continue;
-			
-			if (pclsname != str[0])
-				continue;
-			
-			class<Inventory> itm = str[1];
-			if (!itm)
+			if (data && data.toucherClass == toucherClass)
 			{
-				console.printf("\cgCDP error:\c- \cd%s\c- is not a valid Inventory class", str[1]);
-				return null;
-				break;
+				return data.itemClass;
 			}
-			
-			return itm;
 		}
 		return null;
-	}
-
-	override void BeginPlay()
-	{
-		Super.BeginPlay();
-		
-		if (classPairsList.Size() <= 0)
-		{
-			if (ClassPairs == "")
-			{
-				console.printf("\cgCDP error:\c- Cannot spawn a class-based pickup without a defined list of class pairs");
-				Destroy();
-				return;
-			}
-			
-			if (!FillClassPairs(ClassPairs))
-			{
-				Destroy();
-				return;
-			}
-		}
 	}
 	
 	override void PostBeginPlay()
 	{
 		super.PostBeginPlay();
-		
-		class<Inventory> itmcls = GetItemByClass(players[consoleplayer].mo.GetClassName());
-		if (itmcls)
-		{			
-			let def = GetDefaultByType(itmcls);
-			sprite = def.SpawnState.sprite;
-			frame = def.SpawnState.frame;
-			scale = def.scale;
-			spriteOffset = def.spriteOffset;
-			spriteRotation = def.spriteRotation;
-			bFloatBob = def.bFloatBob;
-			floatBobPhase = def.floatBobPhase;
-			A_SetRenderstyle(def.alpha, def.GetRenderstyle());
+		FillClassPairs();
+		foreach (data : classPairsData)
+		{
+			let itm = SpawnClassPickup(data.toucherClass);
+			if (itm)
+			{
+				itm.bSPECIAL = false;
+				if (data.toucherClass != players[consoleplayer].mo.GetClass())
+				{
+					itm.renderRequired = -1;
+				}
+				spawnedItems.Push(itm);
+			}
 		}
 	}
 
-	Inventory SpawnClassPickup(Actor toucher)
+	Inventory SpawnClassPickup(class<Actor> toucherClass)
 	{
-		class<Inventory> itmcls = GetItemByClass(toucher.GetClassName());
+		class<Inventory> itmcls = GetItemByClass(toucherClass);
 		if (!itmcls) return null;
 		
-		let itm = Inventory(Spawn(itmcls, toucher.pos));
+		let itm = Inventory(Spawn(itmcls, pos));
 		if (!itm) return null;
 			
 		itm.SpawnAngle = SpawnAngle;
@@ -138,49 +143,87 @@ class JGP_ClassDependentPickup : Inventory
 		itm.master = master;
 		itm.target = target;
 		itm.tracer = tracer;
+		itm.bNEVERRESPAWN = true;
 		return itm;
 	}
 
 	override void Touch(Actor toucher)
 	{
-		if (!toucher || !toucher.player)
+		if (!toucher)
 			return;
-
-		let itm = SpawnClassPickup(toucher);
-		if (!itm)
-		{
+		
+		class<Inventory> clsToGive = GetItemByClass(toucher.GetClass());
+		if (!clsToGive)
 			return;
-		}
-
-		itm.Touch(toucher);
-		if (!itm || itm.bNoSector || itm.owner)
+		
+		bool picked;
+		// Check if any of the defined player classes
+		// match this item class:
+		foreach(itm : spawnedItems)
 		{
-			GoAwayAndDie();
+			// If so, try picking it up:
+			if (itm.GetClass() == clsToGive)
+			{
+				itm.bSpecial = true;
+				itm.Touch(toucher);
+				picked = !itm || itm.bNoSector || itm.owner;
+				// Picked successfully - remove the given item
+				// from the array and prepare to destroy this pickup:
+				if (picked)
+				{
+					let id = spawnedItems.Find(itm);
+					if (id < spawnedItems.Size())
+					{
+						spawnedItems.Delete(id);
+					}
+					GoAwayAndDie();
+				}
+				// Otherwise unset bSpecial on the item again:
+				else
+				{
+					itm.bSpecial = false;
+				}
+				break;
+			}
 		}
-		else
+		// If picked up successfully, destroy all other items:
+		if (picked)
 		{
-			itm.Destroy();
+			foreach (itm : spawnedItems)
+			{
+				if (itm)
+				{
+					itm.Destroy();
+				}
+			}
 		}
 	}
 	
+	// This is only used for direct giving,
+	// since Touch() never calls this:
 	override bool TryPickup (in out Actor toucher)
 	{
 		if (!toucher)
 			return false;
-
-		let itm = SpawnClassPickup(toucher);
-		if (!itm)
-		{
-			Destroy();
+		
+		FillClassPairs();
+		class<Inventory> clsToGive = GetItemByClass(toucher.GetClass());
+		if (!clsToGive)
 			return false;
-		}
-
-		bool picked = itm.CallTryPickup(toucher);
-		if (!picked && itm && !itm.bNoSector && !itm.owner)
+		
+		let itm = Inventory(Spawn(clsToGive));
+		if (itm)
 		{
-			itm.Destroy();
+			if (itm.CallTryPickup(toucher))
+			{
+				Destroy();
+				return true;
+			}
+			else
+			{
+				itm.Destroy();
+			}
 		}
-		Destroy();
 		return false;
 	}
 	

@@ -1,6 +1,6 @@
 # Class-depended pickups for GZDoom
 
-© 2021-2023 Agent_Ash aka Jekyll Grim Payne
+© 2021-2025 Agent_Ash aka Jekyll Grim Payne
 
 ## Description
 
